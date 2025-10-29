@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: plataforma-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - plataforma-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: plataforma-redis-commander
+    ports:
+      - "8083:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - plataforma-network
+
+networks:
+  plataforma-network:
+    driver: bridge
