@@ -61,4 +61,10 @@ export class NotificationsService {
     
     return notificacion;
   }
+    async findByStudentId(idEstudiante: number): Promise<Notification[]> {
+    return await this.notificationRepository.find({
+      where: { id_estudiante: idEstudiante },
+      order: { fecha_envio: 'DESC' },
+    });
+  }
 }

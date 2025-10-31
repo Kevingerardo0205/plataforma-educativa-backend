@@ -16,24 +16,24 @@ import { Notification } from './modules/notifications/notification.entity';
 
 @Module({
   imports: [
- TypeOrmModule.forRoot({
-  type: 'mysql',
-  host: 'localhost',
-  port: 3307,
-  username: 'root',
-  password: 'root', // vacío en XAMPP por defecto
-  database: 'plataforma_educativa',
-  entities: [User, Task, Notification],
-  synchronize: false,
-}),
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      host: 'localhost',
+      port: 3307,
+      username: 'root',
+      password: 'root',
+      database: 'plataforma_educativa',
+      entities: [User, Task, Notification],
+      synchronize: false,
+    }),
     
-    // Solo estos 4 módulos
+    // El orden puede ser importante para las dependencias
     AuthModule,
-    PublisherModule, 
-    NotificationsModule,
-    SubscriberModule,
+    NotificationsModule, // Este debe ir antes de SubscriberModule
+    PublisherModule,
+    SubscriberModule, // Depende de NotificationsModule
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {} 
+export class AppModule {}
