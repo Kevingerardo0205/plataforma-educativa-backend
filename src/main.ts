@@ -4,7 +4,7 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+//
   // Habilitar CORS para el frontend - ACTUALIZADO
   app.enableCors({
     origin: [
