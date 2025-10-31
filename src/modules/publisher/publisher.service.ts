@@ -113,4 +113,33 @@ export class PublisherService {
       .orderBy('tarea.fecha_publicacion', 'DESC')
       .getMany();
   }
+
+  // ✅ Nuevo método para consultas personalizadas
+async consultarTareas(filtros: { id_curso?: number; id_tarea?: number }) {
+  const query = this.taskRepository.createQueryBuilder('tarea');
+
+  // Si hay id_curso, lo añadimos al filtro
+  if (filtros.id_curso) {
+    query.andWhere('tarea.id_curso = :id_curso', { id_curso: filtros.id_curso });
+  }
+
+  // Si hay id_tarea, lo añadimos al filtro
+  if (filtros.id_tarea) {
+    query.andWhere('tarea.id_tarea = :id_tarea', { id_tarea: filtros.id_tarea });
+  }
+
+  // Solo traer tareas activas
+  query.andWhere('tarea.activa = :activa', { activa: true });
+
+  // Ordenar por fecha de publicación
+  query.orderBy('tarea.fecha_publicacion', 'DESC');
+
+  // Ejecutar consulta
+  const tareas = await query.getMany();
+
+  return tareas.length > 0
+    ? tareas
+    : { mensaje: 'No se encontraron tareas con los filtros dados.' };
+}
+
 }

@@ -56,4 +56,10 @@ export class PublisherController {
   async obtenerTarea(@Param('id') id: string) {  // Cambiado a string y luego convertir
     return await this.publisherService.obtenerTareaPorId(parseInt(id));
   }
+
+  @Post('consultar')
+async consultarTareas(@Body() body: { id_curso?: number; id_tarea?: number }) {
+  return await this.publisherService.consultarTareas(body);
 }
+}
+
