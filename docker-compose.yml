@@ -2,21 +2,25 @@ version: '3.8'
 
 services:
   mysql_db:
-    image: mysql:8.0                 # Se descarga automáticamente
+    image: mysql:8.0
     container_name: mysql_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root      # Contraseña del root
-      MYSQL_DATABASE: plataforma_educativa  # Base de datos inicial
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: plataforma_educativa
+    command:
+      --lower_case_table_names=1
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
     ports:
-      - "3307:3306"                  # Puerto del host -> puerto del contenedor
+      - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql    # Guarda los datos persistentes
+      - mysql_data:/var/lib/mysql
     networks:
       - plataforma-network
 
   redis:
-    image: redis:7.2-alpine          # Se descarga automáticamente
+    image: redis:7.2-alpine
     container_name: plataforma-redis
     ports:
       - "6379:6379"
@@ -36,7 +40,7 @@ services:
       - plataforma-network
 
 volumes:
-  mysql_data:                        # Volumen persistente para MySQL
+  mysql_data:
 
 networks:
   plataforma-network:
