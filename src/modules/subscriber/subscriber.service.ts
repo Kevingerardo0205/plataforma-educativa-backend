@@ -1,26 +1,54 @@
-// src/modules/subscriber/subscriber.service.ts
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { Notification } from '../notifications/notification.entity';
 
 @Injectable()
 export class SubscriberService implements OnModuleInit {
-  private readonly logger = new Logger(SubscriberService.name);
+  private client: ClientProxy;
 
-  onModuleInit() {
-    this.logger.log('👂 Subscriber inicializado y escuchando eventos Redis...');
+  constructor(
+    @InjectRepository(Notification)
+    private readonly notificationRepository: Repository<Notification>,
+  ) {
+    this.client = ClientProxyFactory.create({
+      transport: Transport.REDIS,
+      options: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+      },
+    });
   }
 
-  // Este decorador escucha los mensajes del canal Redis
-  @MessagePattern('notificacion_estudiante')
-  handleNotificacion(@Payload() data: any) {
-    this.logger.log(`📬 Mensaje recibido desde Redis: ${JSON.stringify(data)}`);
+  async onModuleInit() {
+    await this.subscribeToNotifications();
+  }
 
-    // Aquí puedes agregar lógica personalizada, por ejemplo:
-    // - Enviar notificación a WebSocket (frontend)
-    // - Actualizar estado en BD
-    // - Registrar en logs
+  private async subscribeToNotifications() {
+    // Escuchar eventos de notificaciones
+    this.client.connect().then(() => {
+      this.client.emit('subscribe_notifications', { 
+        subscriber: 'estudiantes',
+        timestamp: new Date() 
+      });
+    });
 
-    this.logger.log(`🔔 Notificación recibida: "${data.mensaje}" para estudiante ${data.id_estudiante}`);
-    return { ok: true, recibido: data };
+    // Aquí puedes agregar más lógica de suscripción
+    console.log('📥 Subscriber service iniciado y escuchando notificaciones...');
+  }
+
+  // Método para que los estudiantes se suscriban a notificaciones
+  async suscribirEstudiante(idEstudiante: number) {
+    // Lógica de suscripción para un estudiante específico
+    return { mensaje: `Estudiante ${idEstudiante} suscrito a notificaciones` };
+  }
+
+  // Método para obtener notificaciones del estudiante
+  async obtenerNotificacionesEstudiante(idEstudiante: number) {
+    return await this.notificationRepository.find({
+      where: { id_estudiante: idEstudiante },
+      order: { fecha_envio: 'DESC' },
+    });
   }
 }
