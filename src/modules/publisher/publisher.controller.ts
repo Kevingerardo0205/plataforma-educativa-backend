@@ -61,5 +61,11 @@ export class PublisherController {
 async consultarTareas(@Body() body: { id_curso?: number; id_tarea?: number }) {
   return await this.publisherService.consultarTareas(body);
 }
+// En publisher.controller.ts - agregar este endpoint
+@Get('estudiante/cursos')
+async obtenerCursosDelEstudiante(@Query('estudianteId') estudianteId: string) {
+  return await this.publisherService.obtenerCursosDelEstudiante(parseInt(estudianteId));
+}
+
 }
 

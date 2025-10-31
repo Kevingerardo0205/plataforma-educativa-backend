@@ -205,4 +205,26 @@ export class PublisherService {
       ? tareas
       : { mensaje: 'No se encontraron tareas con los filtros dados.' };
   }
+  // En publisher.service.ts - agregar este método
+
+  // En publisher.service.ts - agregar este método
+async obtenerCursosDelEstudiante(id_estudiante: number): Promise<any[]> {
+  try {
+    console.log(`🔍 Buscando cursos para estudiante: ${id_estudiante}`);
+    
+    const cursos = await this.taskRepository.query(`
+      SELECT c.id_curso, c.nombre_curso, c.descripcion
+      FROM cursos c
+      INNER JOIN inscripciones i ON c.id_curso = i.id_curso
+      WHERE i.id_estudiante = ?
+    `, [id_estudiante]);
+
+    console.log(`✅ Cursos encontrados para estudiante ${id_estudiante}:`, cursos);
+    return cursos;
+
+  } catch (error) {
+    console.error('❌ Error obteniendo cursos del estudiante:', error);
+    return [];
+  }
+}
 }
