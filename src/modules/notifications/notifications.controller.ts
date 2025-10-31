@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Patch } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 
 @Controller('notifications')
@@ -7,16 +7,21 @@ export class NotificationsController {
 
   @Get()
   async obtenerNotificaciones(@Query('estudianteId') estudianteId?: string) {
-    return await this.notificationsService.obtenerNotificacionesPorEstudiante(estudianteId);
+    // Convertir string a number
+    const id_estudiante = estudianteId ? parseInt(estudianteId) : undefined;
+    return await this.notificationsService.obtenerNotificacionesPorEstudiante(id_estudiante);
   }
 
-  @Get('noleidas')
+  @Get('no-leidas')
   async obtenerNoLeidas(@Query('estudianteId') estudianteId?: string) {
-    return await this.notificationsService.obtenerNoLeidasPorEstudiante(estudianteId);
+    // Convertir string a number
+    const id_estudiante = estudianteId ? parseInt(estudianteId) : undefined;
+    return await this.notificationsService.obtenerNoLeidasPorEstudiante(id_estudiante);
   }
 
-  @Put(':id/leer')
-  async marcarComoLeido(@Param('id') id: number) {
-    return await this.notificationsService.marcarComoLeido(id);
+  @Patch(':id/leer')
+  async marcarComoLeido(@Param('id') id: string) {
+    // Convertir string a number
+    return await this.notificationsService.marcarComoLeido(parseInt(id));
   }
 }

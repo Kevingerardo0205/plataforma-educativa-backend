@@ -5,8 +5,17 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Comenta temporalmente el prefijo global para testing
-  // app.setGlobalPrefix('api/v1');
+  // Habilitar CORS para el frontend - ACTUALIZADO
+  app.enableCors({
+    origin: [
+      'http://localhost:3000', // Frontend en desarrollo
+      'http://192.168.100.41:3000', // Tu IP local para frontend
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  });
+
+  app.setGlobalPrefix('api/v1');
 
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.REDIS,
@@ -20,19 +29,7 @@ async function bootstrap() {
   
   const port = 3002;
   await app.listen(port);
-  
-  // COMENTA o ELIMINA este bloque problemático:
-  // const server = app.getHttpServer();
-  // const router = server._events.request._router;
-  // console.log('=== RUTAS REGISTRADAS ===');
-  // router.stack.forEach((layer: any) => {
-  //   if (layer.route) {
-  //     const methods = Object.keys(layer.route.methods).map(method => method.toUpperCase()).join(', ');
-  //     console.log(`${methods} ${layer.route.path}`);
-  //   }
-  // });
-  // console.log('=========================');
-  
-  console.log(`🚀 Backend ejecutándose en el puerto ${port}`);
+  console.log(`🚀 Backend NestJS ejecutándose en: http://172.25.224.152:${port}`);
+  console.log(`📱 API disponible en: http://172.25.224.152:${port}/api/v1`);
 }
 bootstrap();

@@ -4,7 +4,7 @@ import { PublisherService } from './publisher.service';
 import { PublisherController } from './publisher.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { Task } from './entities/task.entity'; // ← Nueva entidad
+import { Task } from './entities/task.entity';
 
 @Module({
   imports: [
@@ -18,8 +18,8 @@ import { Task } from './entities/task.entity'; // ← Nueva entidad
         },
       },
     ]),
-    TypeOrmModule.forFeature([Task]), // ← Registrar Task entity
-    NotificationsModule,
+    TypeOrmModule.forFeature([Task]),
+    NotificationsModule, // ← Importar NotificationsModule
   ],
   controllers: [PublisherController],
   providers: [PublisherService],

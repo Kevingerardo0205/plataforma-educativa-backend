@@ -1,57 +1,59 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  Body, 
-  Param, 
-  Query 
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { PublisherService } from './publisher.service';
 
 @Controller('publisher')
 export class PublisherController {
   constructor(private readonly publisherService: PublisherService) {}
 
-  // Endpoint existente para notificaciones genéricas
+  // Endpoint para notificaciones genéricas
   @Post('notificacion')
   async enviarNotificacion(@Body() body: { 
-    titulo: string; 
-    contenido: string; 
-    estudianteId?: string; 
+    mensaje: string;  // Cambiado de 'titulo' y 'contenido' a 'mensaje'
+    id_estudiante?: number;  // Cambiado a number
+    id_tarea?: number;  // Cambiado a number (opcional)
   }) {
     return this.publisherService.publishNotification(body);
   }
 
-  // NUEVOS endpoints para tareas
+  // Endpoint para crear tarea
   @Post('tarea')
   async crearTarea(@Body() body: {
     titulo: string;
     descripcion: string;
-    fechaLimite: string;
-    horaLimite?: string;
-    enlace?: string;
-    permitirSubidaArchivos?: boolean;
-    cursoId?: string;
-    docenteId?: string;
+    fecha_limite: string;  // Cambiado a fecha_limite
+    hora_limite?: string;  // Cambiado a hora_limite
+    archivo_material?: string;  // Cambiado de 'enlace' a 'archivo_material'
+    id_curso: number;  // Cambiado a number
   }) {
-    const fechaLimite = new Date(body.fechaLimite);
+    const fecha_limite = new Date(body.fecha_limite);
+    
     return await this.publisherService.publishTask({
       ...body,
-      fechaLimite
+      fecha_limite,
+      id_curso: body.id_curso
     });
   }
 
+  // Endpoint para obtener tareas (por curso o docente)
   @Get('tareas')
-  async obtenerTareas(@Query('cursoId') cursoId?: string) {
-    return await this.publisherService.obtenerTareasPorCurso(cursoId);
+  async obtenerTareas(
+    @Query('cursoId') cursoId?: string,
+    @Query('docenteId') docenteId?: string
+  ) {
+    if (cursoId) {
+      // Convertir string a number
+      return await this.publisherService.obtenerTareasPorCurso(parseInt(cursoId));
+    }
+    if (docenteId) {
+      // Convertir string a number
+      return await this.publisherService.obtenerTareasPorDocente(parseInt(docenteId));
+    }
+    return [];
   }
 
+  // Endpoint para obtener tarea específica
   @Get('tarea/:id')
-  async obtenerTarea(@Param('id') id: number) {
-    return await this.publisherService.obtenerTareaPorId(id);
+  async obtenerTarea(@Param('id') id: string) {  // Cambiado a string y luego convertir
+    return await this.publisherService.obtenerTareaPorId(parseInt(id));
   }
-
-  // Puedes agregar más endpoints para actualizar/eliminar tareas
 }

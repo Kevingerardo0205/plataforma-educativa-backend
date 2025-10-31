@@ -11,37 +11,52 @@ export class NotificationsService {
   ) {}
 
   async crearNotificacion(notificacionData: {
-    titulo: string;
-    contenido: string;
-    estudianteId?: string;
+    mensaje: string; // Cambiado de 'titulo' y 'contenido' a 'mensaje'
+    id_tarea: number;
+    id_estudiante: number;
   }): Promise<Notification> {
-    const notificacion = this.notificationRepository.create(notificacionData);
+    const notificacion = this.notificationRepository.create({
+      ...notificacionData,
+      estado: 'Pendiente'
+    });
     return await this.notificationRepository.save(notificacion);
   }
 
-  async obtenerNotificacionesPorEstudiante(estudianteId?: string): Promise<Notification[]> {
-    const where = estudianteId ? { estudianteId } : {};
-    return await this.notificationRepository.find({
-      where,
-      order: { fechaCreacion: 'DESC' },
-    });
-  }
-
-  async obtenerNoLeidasPorEstudiante(estudianteId?: string): Promise<Notification[]> {
-    const where = estudianteId ? { estudianteId, leido: false } : { leido: false };
-    return await this.notificationRepository.find({
-      where,
-      order: { fechaCreacion: 'DESC' },
-    });
-  }
-
-  async marcarComoLeido(id: number): Promise<Notification> {
-    await this.notificationRepository.update(id, { leido: true });
+  async obtenerNotificacionesPorEstudiante(id_estudiante?: number): Promise<Notification[]> {
+    const where: any = {};
+    if (id_estudiante) {
+      where.id_estudiante = id_estudiante;
+    }
     
-    const notificacion = await this.notificationRepository.findOne({ where: { id } });
+    return await this.notificationRepository.find({
+      where,
+      order: { fecha_envio: 'DESC' }, // Usa el nombre real de la columna
+    });
+  }
+
+  async obtenerNoLeidasPorEstudiante(id_estudiante?: number): Promise<Notification[]> {
+    const where: any = { estado: 'Pendiente' };
+    if (id_estudiante) {
+      where.id_estudiante = id_estudiante;
+    }
+    
+    return await this.notificationRepository.find({
+      where,
+      order: { fecha_envio: 'DESC' }, // Usa el nombre real de la columna
+    });
+  }
+
+  async marcarComoLeido(id_notificacion: number): Promise<Notification> {
+    await this.notificationRepository.update(id_notificacion, { 
+      estado: 'Leida' 
+    });
+    
+    const notificacion = await this.notificationRepository.findOne({ 
+      where: { id_notificacion } 
+    });
     
     if (!notificacion) {
-      throw new NotFoundException(`Notificación con ID ${id} no encontrada`);
+      throw new NotFoundException(`Notificación con ID ${id_notificacion} no encontrada`);
     }
     
     return notificacion;
