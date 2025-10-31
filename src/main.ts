@@ -9,7 +9,9 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000', // Frontend en desarrollo
-      'http://192.168.100.41:3000', // Tu IP local para frontend
+      'http://192.168.100.41:3000',
+      'http://localhost:3001', // Tu IP local para frontend
+      'http://192.168.100.41:3001'
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,

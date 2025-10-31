@@ -11,30 +11,32 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async validateUser(correo: string, contrasena: string): Promise<any> {
-    console.log('Validando usuario:', correo); // Debug
+ async validateUser(correo: string, contrasena: string): Promise<any> {
+    console.log('🔐 Validando usuario:', correo);
     
     const user = await this.userRepository.findOne({
-      where: { correo }
+        where: { correo }
     });
 
-    console.log('Usuario encontrado:', user); // Debug
+    console.log('👤 Usuario encontrado:', user);
 
     if (user && user.contrasena === contrasena) {
-      const { contrasena, ...result } = user;
-      return result;
+        const { contrasena, ...result } = user;
+        console.log('✅ Credenciales válidas para:', user.nombre);
+        return result;
     }
     
-    console.log('Credenciales incorrectas'); // Debug
+    console.log('❌ Credenciales incorrectas para:', correo);
     return null;
-  }
+}
 
-  async login(user: any) {
+async login(user: any) {
+    console.log('🚀 Generando respuesta de login para:', user.nombre);
     return {
-      id_usuario: user.id_usuario,
-      nombre: user.nombre,
-      correo: user.correo,
-      rol: user.rol,
+        id_usuario: user.id_usuario,
+        nombre: user.nombre,
+        correo: user.correo,
+        rol: user.rol,
     };
   }
 }
