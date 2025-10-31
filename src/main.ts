@@ -29,7 +29,7 @@ async function bootstrap() {
   
   const port = 3002;
   await app.listen(port);
-  console.log(`🚀 Backend NestJS ejecutándose en: http://172.25.224.152:${port}`);
-  console.log(`📱 API disponible en: http://172.25.224.152:${port}/api/v1`);
+  console.log(`🚀 Backend NestJS ejecutándose en: http://192.168.100.41:${port}`);
+  console.log(`📱 API disponible en: http://192.168.100.41:${port}/api/v1`);
 }
 bootstrap();

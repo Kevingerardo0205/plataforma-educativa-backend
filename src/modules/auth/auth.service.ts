@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+// auth.service.ts
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -10,24 +11,30 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<any> {
-    console.log('🔍 Buscando usuario:', email);
+  async validateUser(correo: string, contrasena: string): Promise<any> {
+    console.log('Validando usuario:', correo); // Debug
     
     const user = await this.userRepository.findOne({
-      where: { correo: email, contrasena: password }
+      where: { correo }
     });
 
-    console.log('📋 Usuario encontrado:', user ? 'Sí' : 'No');
-    
-    if (user) {
+    console.log('Usuario encontrado:', user); // Debug
+
+    if (user && user.contrasena === contrasena) {
       const { contrasena, ...result } = user;
       return result;
     }
+    
+    console.log('Credenciales incorrectas'); // Debug
     return null;
   }
 
-  // Método para obtener todos los usuarios (para debugging)
-  async getAllUsers() {
-    return await this.userRepository.find();
+  async login(user: any) {
+    return {
+      id_usuario: user.id_usuario,
+      nombre: user.nombre,
+      correo: user.correo,
+      rol: user.rol,
+    };
   }
 }
