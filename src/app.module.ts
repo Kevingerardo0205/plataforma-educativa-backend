@@ -25,6 +25,7 @@ import { Notification } from './modules/notifications/notification.entity';
       database: 'plataforma_educativa',
       entities: [User, Task, Notification],
       synchronize: false,
+      logging: true, 
     }),
     
     // El orden puede ser importante para las dependencias
