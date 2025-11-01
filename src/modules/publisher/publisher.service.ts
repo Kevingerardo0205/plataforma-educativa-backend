@@ -1,5 +1,4 @@
-// src/modules/publisher/publisher.service.ts
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -40,80 +39,28 @@ export class PublisherService {
       notificacionId: notificacionGuardada.id_notificacion,
     };
   }
-
-  // ✅ Método para publicar tareas
-  async publishTask(tareaData: {
-    titulo: string;
-    descripcion: string;
-    fecha_limite: Date;
-    hora_limite?: string;
-    archivo_material?: string;
-    id_curso: number;
-  }) {
-    // 1. Guardar tarea en BD
-    const tarea = this.taskRepository.create(tareaData);
-    const tareaGuardada = await this.taskRepository.save(tarea);
-    
-    console.log('💾 Tarea guardada en BD con ID:', tareaGuardada.id_tarea);
-
-    try {
-      // 2. Obtener estudiantes inscritos en el curso
-      const estudiantes = await this.obtenerEstudiantesDelCurso(tareaData.id_curso);
-      
-      if (estudiantes.length > 0) {
-        // Crear notificación para cada estudiante del curso
-        const notificacionesPromises = estudiantes.map(async (estudiante) => {
-          const notificacionPayload = {
-            mensaje: `📚 Nueva Tarea: ${tareaData.titulo}`,
-            id_tarea: tareaGuardada.id_tarea,
-            id_estudiante: estudiante.id_estudiante,
-          };
-
-          console.log(`📨 Creando notificación para estudiante: ${estudiante.id_estudiante}`);
-
-          const notificacionGuardada = await this.notificationsService.crearNotificacion(notificacionPayload);
-
-          // Publicar evento Redis
-          await this.client.emit('notificacion_estudiante', {
-            ...notificacionPayload,
-            id: notificacionGuardada.id_notificacion,
-            fechaCreacion: notificacionGuardada.fecha_envio,
-          }).toPromise();
-
-          return notificacionGuardada;
-        });
-
-        const notificaciones = await Promise.all(notificacionesPromises);
-        console.log(`📢 Notificaciones enviadas a ${estudiantes.length} estudiantes`);
-        
-        return { 
-          mensaje: 'Tarea publicada y notificada',
-          tareaId: tareaGuardada.id_tarea,
-          notificacionesIds: notificaciones.map(n => n.id_notificacion),
-          estudiantesNotificados: estudiantes.length
-        };
-      } else {
-        // Si no hay estudiantes, solo guardar la tarea sin notificaciones
-        console.log('ℹ️ No hay estudiantes en el curso, solo se guardó la tarea');
-        
-        return { 
-          mensaje: 'Tarea publicada (sin estudiantes para notificar)',
-          tareaId: tareaGuardada.id_tarea,
-          advertencia: 'No hay estudiantes inscritos en este curso'
-        };
-      }
-    } catch (error) {
-      console.error('❌ Error creando notificaciones:', error);
-      
-      // Si falla la notificación, al menos retornar que la tarea se guardó
-      return { 
-        mensaje: 'Tarea publicada (error en notificaciones)',
-        tareaId: tareaGuardada.id_tarea,
-        error: error.message
-      };
-    }
-  }
-
+// En publisher.service.ts - Agrega logs al publishTask
+async publishTask(tareaData: {
+  titulo: string;
+  descripcion: string;
+  fecha_limite: Date;
+  hora_limite?: string;
+  archivo_material?: string;
+  id_curso: number;
+}) {
+  console.log('🚨 INICIANDO PUBLISH TASK - CREAR NUEVA TAREA');
+  console.log('🚨 Stack trace publishTask:', new Error().stack);
+  console.log('📤 Datos para nueva tarea:', tareaData);
+  
+  // 1. Guardar tarea en BD
+  const tarea = this.taskRepository.create(tareaData);
+  const tareaGuardada = await this.taskRepository.save(tarea);
+  
+  console.log('💾 Tarea guardada en BD con ID:', tareaGuardada.id_tarea);
+  
+  // ... resto del código igual
+}
+ 
   // ✅ CONSULTA DIRECTA a la base de datos para obtener estudiantes
   private async obtenerEstudiantesDelCurso(idCurso: number): Promise<any[]> {
     try {
@@ -178,36 +125,39 @@ export class PublisherService {
       .getMany();
   }
 
-  // ✅ Método para consultas personalizadas
-  async consultarTareas(filtros: { id_curso?: number; id_tarea?: number }) {
-    const query = this.taskRepository.createQueryBuilder('tarea');
+  // En publisher.service.ts
+// En publisher.service.ts - actualiza consultarTareas si quieres ver todas
+async consultarTareas(filtros: { id_curso?: number; id_tarea?: number }) {
+  console.log('🔍 Consultando tareas con filtros:', filtros);
+  
+  const query = this.taskRepository.createQueryBuilder('tarea');
 
-    // Si hay id_curso, lo añadimos al filtro
-    if (filtros.id_curso) {
-      query.andWhere('tarea.id_curso = :id_curso', { id_curso: filtros.id_curso });
-    }
-
-    // Si hay id_tarea, lo añadimos al filtro
-    if (filtros.id_tarea) {
-      query.andWhere('tarea.id_tarea = :id_tarea', { id_tarea: filtros.id_tarea });
-    }
-
-    // Solo traer tareas activas
-    query.andWhere('tarea.activa = :activa', { activa: true });
-
-    // Ordenar por fecha de publicación
-    query.orderBy('tarea.fecha_publicacion', 'DESC');
-
-    // Ejecutar consulta
-    const tareas = await query.getMany();
-
-    return tareas.length > 0
-      ? tareas
-      : { mensaje: 'No se encontraron tareas con los filtros dados.' };
+  // Si hay id_curso, lo añadimos al filtro
+  if (filtros.id_curso) {
+    query.andWhere('tarea.id_curso = :id_curso', { id_curso: filtros.id_curso });
   }
-  // En publisher.service.ts - agregar este método
 
-  // En publisher.service.ts - agregar este método
+  // Si hay id_tarea, lo añadimos al filtro
+  if (filtros.id_tarea) {
+    query.andWhere('tarea.id_tarea = :id_tarea', { id_tarea: filtros.id_tarea });
+  }
+
+  // ❌ REMOVER este filtro si quieres ver TODAS las tareas (incluyendo inactivas)
+  // query.andWhere('tarea.activa = :activa', { activa: true });
+
+  // Ordenar por fecha de publicación
+  query.orderBy('tarea.fecha_publicacion', 'DESC');
+
+  // Ejecutar consulta
+  const tareas = await query.getMany();
+
+  console.log(`📊 Tareas encontradas: ${tareas.length}`);
+  tareas.forEach(t => console.log(`   - ID: ${t.id_tarea}, Título: ${t.titulo}, Activa: ${t.activa}`));
+
+  return tareas.length > 0
+    ? tareas
+    : [];
+}
 async obtenerCursosDelEstudiante(id_estudiante: number): Promise<any[]> {
   try {
     console.log(`🔍 Buscando cursos para estudiante: ${id_estudiante}`);
@@ -227,4 +177,168 @@ async obtenerCursosDelEstudiante(id_estudiante: number): Promise<any[]> {
     return [];
   }
 }
+
+// En publisher.service.ts - Agrega esto temporalmente
+async actualizarTarea(
+  id_tarea: number, 
+  tareaData: {
+    titulo?: string;
+    descripcion?: string;
+    fecha_limite?: string;
+    hora_limite?: string;
+    archivo_material?: string;
+  }
+) {
+  console.log('🚨 INICIANDO ACTUALIZAR TAREA - ID:', id_tarea);
+  console.log('🚨 Stack trace completo:', new Error().stack);
+  
+  try {
+    console.log(`✏️ Actualizando tarea ID: ${id_tarea}`, tareaData);
+
+    // Buscar la tarea existente
+    const tareaExistente = await this.taskRepository.findOne({
+      where: { id_tarea, activa: true }
+    });
+
+    if (!tareaExistente) {
+      throw new HttpException(
+        {
+          success: false,
+          error: `Tarea con ID ${id_tarea} no encontrada`,
+          tareaId: id_tarea,
+          actualizado: false
+        },
+        HttpStatus.NOT_FOUND
+      );
+    }
+
+    console.log('✅ Tarea existente encontrada:', tareaExistente);
+
+    // Preparar datos para actualizar
+    const datosActualizacion: any = {};
+    
+    if (tareaData.titulo !== undefined) datosActualizacion.titulo = tareaData.titulo;
+    if (tareaData.descripcion !== undefined) datosActualizacion.descripcion = tareaData.descripcion;
+    if (tareaData.fecha_limite !== undefined) datosActualizacion.fecha_limite = new Date(tareaData.fecha_limite);
+    if (tareaData.hora_limite !== undefined) datosActualizacion.hora_limite = tareaData.hora_limite;
+    if (tareaData.archivo_material !== undefined) datosActualizacion.archivo_material = tareaData.archivo_material;
+
+    console.log('📝 Datos para actualizar:', datosActualizacion);
+
+    // SOLO ACTUALIZAR - NO CREAR NUEVA TAREA
+    const resultado = await this.taskRepository.update(
+      { id_tarea },
+      datosActualizacion
+    );
+
+    console.log('✅ Resultado de update:', resultado);
+
+    if (resultado.affected === 0) {
+      throw new HttpException(
+        {
+          success: false,
+          error: 'No se pudo actualizar la tarea',
+          tareaId: id_tarea,
+          actualizado: false
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    // Obtener la tarea actualizada
+    const tareaActualizada = await this.taskRepository.findOne({
+      where: { id_tarea }
+    });
+
+    console.log('✅ Tarea actualizada correctamente:', tareaActualizada);
+
+    // RETORNAR OBJETO JSON EXPLÍCITO
+    return {
+      success: true,
+      mensaje: 'Tarea actualizada correctamente',
+      tarea: tareaActualizada,
+      actualizado: true,
+      timestamp: new Date().toISOString()
+    };
+
+  } catch (error) {
+    console.error('❌ Error en actualizarTarea:', error);
+    throw error;
+  }
+}
+  // ✅ Método CORREGIDO para eliminar tarea (borrado lógico)
+
+// En publisher.service.ts - REEMPLAZA completamente el método eliminarTarea
+async eliminarTarea(id_tarea: number) {
+  try {
+    console.log(`🔥 ELIMINACIÓN FÍSICA - Tarea ID: ${id_tarea}`);
+
+    // Buscar la tarea existente (sin filtrar por activa)
+    const tareaExistente = await this.taskRepository.findOne({
+      where: { id_tarea }
+    });
+
+    if (!tareaExistente) {
+      throw new HttpException(
+        {
+          success: false,
+          error: `Tarea con ID ${id_tarea} no encontrada`,
+          tareaId: id_tarea,
+          eliminado: false
+        },
+        HttpStatus.NOT_FOUND
+      );
+    }
+
+    console.log('✅ Tarea encontrada para eliminación física:', tareaExistente);
+
+    // ✅ BORRADO FÍSICO - ELIMINAR PERMANENTEMENTE
+    const resultado = await this.taskRepository.delete(id_tarea);
+
+    console.log('✅ Resultado de eliminación física:', resultado);
+
+    if (resultado.affected === 0) {
+      throw new HttpException(
+        {
+          success: false,
+          error: 'No se pudo eliminar la tarea',
+          tareaId: id_tarea,
+          eliminado: false
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+
+    console.log('🔥 Tarea ELIMINADA FÍSICAMENTE de la base de datos');
+
+    // RETORNAR OBJETO JSON EXPLÍCITO
+    return {
+      success: true,
+      mensaje: 'Tarea eliminada permanentemente de la base de datos',
+      tareaId: id_tarea,
+      eliminado: true,
+      timestamp: new Date().toISOString()
+    };
+
+  } catch (error) {
+    console.error('❌ Error eliminando tarea físicamente:', error);
+    
+    // Si ya es una HttpException, relanzarla
+    if (error instanceof HttpException) {
+      throw error;
+    }
+    
+    // Para otros errores, crear una HttpException
+    throw new HttpException(
+      {
+        success: false,
+        error: error.message,
+        tareaId: id_tarea,
+        eliminado: false
+      },
+      HttpStatus.INTERNAL_SERVER_ERROR
+    );
+  }
+}
+
 }
