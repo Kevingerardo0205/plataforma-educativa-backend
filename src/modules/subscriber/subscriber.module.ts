@@ -8,25 +8,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    // Importa TypeOrmModule para la entidad Notification
-    TypeOrmModule.forFeature([Notification]),
-    
-    // Importa el NotificationsModule para tener acceso a sus servicios/repositorios
-    NotificationsModule,
-    
-    ClientsModule.register([
-      {
-        name: 'REDIS_SUBSCRIBER',
-        transport: Transport.REDIS,
-        options: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT ?? '6379'),
-        },
-      },
-    ]),
+    TypeOrmModule.forFeature([Notification]), 
+    NotificationsModule
   ],
-  controllers: [SubscriberController],
   providers: [SubscriberService],
+  controllers: [SubscriberController],
   exports: [SubscriberService],
 })
 export class SubscriberModule {}

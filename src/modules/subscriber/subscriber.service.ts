@@ -1,54 +1,52 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
-import { Notification } from '../notifications/notification.entity';
+import Redis from 'ioredis';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
 export class SubscriberService implements OnModuleInit {
-  private client: ClientProxy;
+
+  private redis: Redis;
 
   constructor(
-    @InjectRepository(Notification)
-    private readonly notificationRepository: Repository<Notification>,
-  ) {
-    this.client = ClientProxyFactory.create({
-      transport: Transport.REDIS,
-      options: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      },
-    });
-  }
+    private readonly notificationsService: NotificationsService,
+    private readonly gateway: NotificationsGateway,
+  ) {}
 
   async onModuleInit() {
-    await this.subscribeToNotifications();
-  }
+    console.log("✅ SubscriberService inicializado correctamente");
 
-  private async subscribeToNotifications() {
-    // Escuchar eventos de notificaciones
-    this.client.connect().then(() => {
-      this.client.emit('subscribe_notifications', { 
-        subscriber: 'estudiantes',
-        timestamp: new Date() 
-      });
+    // ✅ CREAR EL CLIENTE REDIS PARA SUBSCRIPCIÓN
+    this.redis = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT ?? '6379'),
     });
 
-    // Aquí puedes agregar más lógica de suscripción
-    console.log('📥 Subscriber service iniciado y escuchando notificaciones...');
-  }
+    // ✅ SUSCRIBIRSE AL CANAL
+    this.redis.subscribe('notificacion_estudiante', (err, count) => {
+      if (err) {
+        console.error("❌ Error al suscribirse a canal Redis:", err);
+      } else {
+        console.log("🔔 Suscrito al canal: notificacion_estudiante");
+      }
+    });
 
-  // Método para que los estudiantes se suscriban a notificaciones
-  async suscribirEstudiante(idEstudiante: number) {
-    // Lógica de suscripción para un estudiante específico
-    return { mensaje: `Estudiante ${idEstudiante} suscrito a notificaciones` };
-  }
+    // ✅ LISTENER DEL CANAL
+    this.redis.on('message', async (channel, message) => {
+      console.log(`📩 Mensaje recibido en canal ${channel}: ${message}`);
 
-  // Método para obtener notificaciones del estudiante
-  async obtenerNotificacionesEstudiante(idEstudiante: number) {
-    return await this.notificationRepository.find({
-      where: { id_estudiante: idEstudiante },
-      order: { fecha_envio: 'DESC' },
+ 
+  try {
+    const payload = JSON.parse(message);
+    const data = payload.data || payload; // ✅ EXTRAE CORRECTAMENTE
+
+    await this.notificationsService.createFromRedis(data);
+
+    this.gateway.emitToFrontend(data);
+
+  }  catch (error) {
+        console.error("❌ Error procesando mensaje de Redis:", error);
+      }
     });
   }
 }

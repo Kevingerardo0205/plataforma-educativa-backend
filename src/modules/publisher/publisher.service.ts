@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class PublisherService {
@@ -12,34 +13,71 @@ export class PublisherService {
     private readonly notificationsService: NotificationsService,
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
+    private readonly dataSource: DataSource, 
+
   ) {}
 
-  // ✅ Método para notificaciones genéricas
   async publishNotification(payload: {
-    mensaje: string;
-    id_estudiante?: number;
-    id_tarea?: number;
-  }) {
-    const notificacionGuardada = await this.notificationsService.crearNotificacion({
-      mensaje: payload.mensaje,
-      id_tarea: payload.id_tarea || 0,
-      id_estudiante: payload.id_estudiante || 0,
-    });
-    
-    console.log('💾 Notificación guardada en BD con ID:', notificacionGuardada.id_notificacion);
-
-    await this.client.emit('notificacion_estudiante', {
-      ...payload,
-      id: notificacionGuardada.id_notificacion,
-      fechaCreacion: notificacionGuardada.fecha_envio,
-    }).toPromise();
-
-    return { 
-      mensaje: 'Notificación publicada y guardada', 
-      notificacionId: notificacionGuardada.id_notificacion,
-    };
+  mensaje: string;
+  id_estudiante: number;
+  id_tarea: number;
+}) {
+  // ✅ Validar que existen ambos valores requeridos
+  if (!payload.id_estudiante || !payload.id_tarea) {
+    throw new HttpException(
+      'id_estudiante y id_tarea son requeridos y deben existir',
+      HttpStatus.BAD_REQUEST
+    );
   }
-// En publisher.service.ts - Agrega logs al publishTask
+
+  // ✅ 1. Verificar existencia reales en la BD
+  const tareaExiste = await this.taskRepository.findOne({
+    where: { id_tarea: payload.id_tarea }
+  });
+
+  if (!tareaExiste) {
+    throw new HttpException(
+      `La tarea con id ${payload.id_tarea} no existe`,
+      HttpStatus.BAD_REQUEST
+    );
+  }
+
+  const estudianteExiste = await this.dataSource.query(
+    'SELECT id_usuario FROM Usuarios WHERE id_usuario = ? LIMIT 1', 
+    [payload.id_estudiante]
+  );
+
+  if (estudianteExiste.length === 0) {
+    throw new HttpException(
+      `El estudiante con id ${payload.id_estudiante} no existe`,
+      HttpStatus.BAD_REQUEST
+    );
+  }
+
+  // ✅ 2. Guardar notificación en BD
+  const notificacionGuardada = await this.notificationsService.crearNotificacion({
+    mensaje: payload.mensaje,
+    id_tarea: payload.id_tarea,
+    id_estudiante: payload.id_estudiante,
+  });
+
+  console.log('💾 Notificación guardada:', notificacionGuardada);
+
+  // ✅ 3. Publicar evento en Redis
+  await this.client.emit('notificacion_estudiante', {
+    ...payload,
+    id_notificacion: notificacionGuardada.id_notificacion,
+    fecha_envio: notificacionGuardada.fecha_envio,
+  }).toPromise();
+
+  return {
+    success: true,
+    mensaje: 'Notificación publicada y guardada correctamente',
+    datos: notificacionGuardada
+  };
+}
+
+
 async publishTask(tareaData: {
   titulo: string;
   descripcion: string;
@@ -48,49 +86,61 @@ async publishTask(tareaData: {
   archivo_material?: string;
   id_curso: number;
 }) {
+
   console.log('🚨 INICIANDO PUBLISH TASK - CREAR NUEVA TAREA');
-  console.log('🚨 Stack trace publishTask:', new Error().stack);
-  console.log('📤 Datos para nueva tarea:', tareaData);
-  
-  // 1. Guardar tarea en BD
+
+  // ✅ 1. Guardar primero la tarea en BD
   const tarea = this.taskRepository.create(tareaData);
   const tareaGuardada = await this.taskRepository.save(tarea);
-  
+
   console.log('💾 Tarea guardada en BD con ID:', tareaGuardada.id_tarea);
-  
-  // ... resto del código igual
-}
- 
-  // ✅ CONSULTA DIRECTA a la base de datos para obtener estudiantes
-  private async obtenerEstudiantesDelCurso(idCurso: number): Promise<any[]> {
-    try {
-      console.log(`🔍 Buscando estudiantes para curso: ${idCurso}`);
-      
-      // Consulta directa a la base de datos
-      const estudiantes = await this.taskRepository.query(`
-        SELECT id_estudiante
-        FROM inscripciones 
-        WHERE id_curso = ?
-      `, [idCurso]);
 
-      console.log(`✅ Estudiantes encontrados en curso ${idCurso}:`, estudiantes);
-      
-      // Verificar que tenemos datos válidos
-      const estudiantesValidos = estudiantes.filter(est => 
-        est && est.id_estudiante && !isNaN(est.id_estudiante)
-      );
+  // ✅ 2. Buscar estudiantes inscritos en este curso
+  const estudiantes = await this.obtenerEstudiantesDelCurso(tareaGuardada.id_curso);
 
-      console.log(`📊 Total de estudiantes válidos: ${estudiantesValidos.length}`);
+  console.log('📡 Estudiantes inscritos a este curso:', estudiantes);
 
-      return estudiantesValidos;
+  // ✅ 3. Publicar la tarea al canal del curso
+  const canalCurso = `curso_${tareaGuardada.id_curso}`;
 
-    } catch (error) {
-      console.error('❌ Error obteniendo estudiantes del curso:', error);
-      
-      // En caso de error, retornar array vacío
-      return [];
-    }
+  try {
+    await this.client.emit(canalCurso, {
+      id_tarea: tareaGuardada.id_tarea,
+      titulo: tareaGuardada.titulo,
+      id_curso: tareaGuardada.id_curso,
+      fecha_publicacion: tareaGuardada.fecha_publicacion,
+      estudiantes: estudiantes.map(e => e.id_estudiante)
+    }).toPromise();
+
+    console.log(`📡 Evento publicado correctamente en canal ${canalCurso}`);
+
+  } catch (error) {
+    console.error('❌ Error publicando evento tarea_creada:', error);
+    throw new HttpException('Error enviando evento Redis', HttpStatus.INTERNAL_SERVER_ERROR);
   }
+
+  return {
+    mensaje: 'Tarea creada y notificada',
+    tareaId: tareaGuardada.id_tarea
+  };
+}
+
+private async obtenerEstudiantesDelCurso(idCurso: number): Promise<any[]> {
+  try {
+    const estudiantes = await this.dataSource.query(`
+      SELECT id_estudiante
+      FROM inscripciones 
+      WHERE id_curso = ?
+    `, [idCurso]);
+
+    return estudiantes;
+
+  } catch (error) {
+    console.error('❌ Error obteniendo estudiantes del curso:', error);
+    return [];
+  }
+}
+
 
   // ✅ Método para obtener tareas por curso
   async obtenerTareasPorCurso(id_curso: number): Promise<Task[]> {

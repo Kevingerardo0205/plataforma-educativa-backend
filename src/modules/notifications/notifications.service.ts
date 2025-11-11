@@ -5,13 +5,14 @@ import { Notification } from './notification.entity';
 
 @Injectable()
 export class NotificationsService {
+
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
   ) {}
 
   async crearNotificacion(notificacionData: {
-    mensaje: string; // Cambiado de 'titulo' y 'contenido' a 'mensaje'
+    mensaje: string;
     id_tarea: number;
     id_estudiante: number;
   }): Promise<Notification> {
@@ -30,7 +31,7 @@ export class NotificationsService {
     
     return await this.notificationRepository.find({
       where,
-      order: { fecha_envio: 'DESC' }, // Usa el nombre real de la columna
+      order: { fecha_envio: 'DESC' },
     });
   }
 
@@ -42,8 +43,26 @@ export class NotificationsService {
     
     return await this.notificationRepository.find({
       where,
-      order: { fecha_envio: 'DESC' }, // Usa el nombre real de la columna
+      order: { fecha_envio: 'DESC' },
     });
+  }
+
+  async createFromRedis(data: {
+    mensaje: string;
+    id_tarea: number;
+    id_estudiante: number;
+    fecha_envio?: Date;
+    id_notificacion?: number;
+  }) {
+    const notificacion = this.notificationRepository.create({
+      mensaje: data.mensaje,
+      id_tarea: data.id_tarea,
+      id_estudiante: data.id_estudiante,
+      fecha_envio: data.fecha_envio ? new Date(data.fecha_envio) : new Date(),
+      estado: 'Pendiente'
+    });
+
+    return await this.notificationRepository.save(notificacion);
   }
 
   async marcarComoLeido(id_notificacion: number): Promise<Notification> {
@@ -61,7 +80,8 @@ export class NotificationsService {
     
     return notificacion;
   }
-    async findByStudentId(idEstudiante: number): Promise<Notification[]> {
+
+  async findByStudentId(idEstudiante: number): Promise<Notification[]> {
     return await this.notificationRepository.find({
       where: { id_estudiante: idEstudiante },
       order: { fecha_envio: 'DESC' },

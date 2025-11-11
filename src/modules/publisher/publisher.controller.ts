@@ -6,14 +6,15 @@ import { PublisherService } from './publisher.service';
 export class PublisherController {
   constructor(private readonly publisherService: PublisherService) {}
 
-  @Post('notificacion')
-  async enviarNotificacion(@Body() body: { 
-    mensaje: string;
-    id_estudiante?: number;
-    id_tarea?: number;
-  }) {
-    return this.publisherService.publishNotification(body);
-  }
+@Post('notificacion')
+async enviarNotificacion(@Body() body) {
+  return this.publisherService.publishNotification({
+    mensaje: body.mensaje,
+    id_estudiante: body.id_estudiante,
+    id_tarea: body.id_tarea
+  });
+}
+
 
   @Post('tarea')
   async crearTarea(@Body() body: {
