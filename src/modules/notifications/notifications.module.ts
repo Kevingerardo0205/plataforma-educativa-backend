@@ -5,12 +5,14 @@ import { NotificationsController } from './notifications.controller';
 import { Notification } from './notification.entity';
 import { ManualNotificationCreator } from './factory/manual-notification.creator';
 import { TaskNotificationCreator } from './factory/task-notification.creator';
+import { NotificationsGateway } from './notifications.gateway';
 
 
 @Module({
   imports: [TypeOrmModule.forFeature([Notification])],
   providers: [
     NotificationsService,
+    NotificationsGateway,
 
     {
       provide: 'MANUAL_NOTIFICATION_CREATOR',
@@ -21,6 +23,6 @@ import { TaskNotificationCreator } from './factory/task-notification.creator';
       useClass: TaskNotificationCreator,
     },
   ],
-  exports: [NotificationsService],
+  exports: [NotificationsService, NotificationsGateway],
 })
 export class NotificationsModule {}

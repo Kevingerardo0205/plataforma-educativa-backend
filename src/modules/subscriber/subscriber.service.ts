@@ -43,6 +43,7 @@ export class SubscriberService implements OnModuleInit {
 
     this.gateway.emitToFrontend(data);
 
+    
   }  catch (error) {
         console.error("❌ Error procesando mensaje de Redis:", error);
       }
