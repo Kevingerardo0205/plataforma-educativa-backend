@@ -15,7 +15,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
-  // ✅ SOLO UNA VEZ
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.REDIS,
     options: {
@@ -30,9 +29,8 @@ async function bootstrap() {
   const port = 3002;
   await app.listen(port, '0.0.0.0');
 
-  console.log("REDIS HOST:", process.env.REDIS_HOST);
-console.log("REDIS PORT:", process.env.REDIS_PORT);
-console.log(`🚀 Backend NestJS ejecutándose en: http://localhost:${port}`);
+
+console.log(` Backend NestJS ejecutándose en: http://localhost:${port}`);
 
 }
 

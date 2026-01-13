@@ -14,15 +14,14 @@ export class SubscriberService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    console.log("✅ SubscriberService inicializado correctamente");
+    console.log(" SubscriberService inicializado correctamente");
 
-    // ✅ CREAR EL CLIENTE REDIS PARA SUBSCRIPCIÓN
     this.redis = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT ?? '6379'),
     });
 
-    // ✅ SUSCRIBIRSE AL CANAL
+    //  SUSCRIBIRSE AL CANAL
     this.redis.subscribe('notificacion_estudiante', (err, count) => {
       if (err) {
         console.error("❌ Error al suscribirse a canal Redis:", err);
@@ -31,14 +30,14 @@ export class SubscriberService implements OnModuleInit {
       }
     });
 
-    // ✅ LISTENER DEL CANAL
+    //  escucha DEL CANAL
     this.redis.on('message', async (channel, message) => {
       console.log(`📩 Mensaje recibido en canal ${channel}: ${message}`);
 
  
   try {
     const payload = JSON.parse(message);
-    const data = payload.data || payload; // ✅ EXTRAE CORRECTAMENTE
+    const data = payload.data || payload; //  EXTRAE CORRECTAMENTE
 
     await this.notificationsService.createFromRedis(data);
 

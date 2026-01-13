@@ -22,7 +22,7 @@ export class PublisherService {
   id_estudiante: number;
   id_tarea: number;
 }) {
-  // ✅ Validar que existen ambos valores requeridos
+  //  Validar que existen ambos valores requeridos
   if (!payload.id_estudiante || !payload.id_tarea) {
     throw new HttpException(
       'id_estudiante y id_tarea son requeridos y deben existir',
@@ -30,7 +30,7 @@ export class PublisherService {
     );
   }
 
-  // ✅ 1. Verificar existencia reales en la BD
+  //  1. Verificar existencia reales en la BD
   const tareaExiste = await this.taskRepository.findOne({
     where: { id_tarea: payload.id_tarea }
   });
@@ -59,7 +59,8 @@ export class PublisherService {
     mensaje: payload.mensaje,
     id_tarea: payload.id_tarea,
     id_estudiante: payload.id_estudiante,
-  });
+  },
+  'MANUAL' );
 
   console.log('💾 Notificación guardada:', notificacionGuardada);
 
@@ -89,18 +90,18 @@ async publishTask(tareaData: {
 
   console.log('🚨 INICIANDO PUBLISH TASK - CREAR NUEVA TAREA');
 
-  // ✅ 1. Guardar primero la tarea en BD
+  //  1. Guardar primero la tarea en BD
   const tarea = this.taskRepository.create(tareaData);
   const tareaGuardada = await this.taskRepository.save(tarea);
 
   console.log('💾 Tarea guardada en BD con ID:', tareaGuardada.id_tarea);
 
-  // ✅ 2. Buscar estudiantes inscritos en este curso
+  //  2. Buscar estudiantes inscritos en este curso
   const estudiantes = await this.obtenerEstudiantesDelCurso(tareaGuardada.id_curso);
 
   console.log('📡 Estudiantes inscritos a este curso:', estudiantes);
 
-  // ✅ 3. Publicar la tarea al canal del curso
+  //  3. Publicar la tarea al canal del curso
   const canalCurso = `curso_${tareaGuardada.id_curso}`;
 
   try {
@@ -112,7 +113,7 @@ async publishTask(tareaData: {
       estudiantes: estudiantes.map(e => e.id_estudiante)
     }).toPromise();
 
-    console.log(`📡 Evento publicado correctamente en canal ${canalCurso}`);
+    console.log(`📡 Evento publicado correctamente en canal`);
 
   } catch (error) {
     console.error('❌ Error publicando evento tarea_creada:', error);
@@ -142,7 +143,7 @@ private async obtenerEstudiantesDelCurso(idCurso: number): Promise<any[]> {
 }
 
 
-  // ✅ Método para obtener tareas por curso
+  //  Método para obtener tareas por curso
   async obtenerTareasPorCurso(id_curso: number): Promise<Task[]> {
     return await this.taskRepository.find({
       where: { id_curso, activa: true },
@@ -150,7 +151,7 @@ private async obtenerEstudiantesDelCurso(idCurso: number): Promise<any[]> {
     });
   }
 
-  // ✅ Método para obtener tarea por ID
+  //  Método para obtener tarea por ID
   async obtenerTareaPorId(id_tarea: number): Promise<Task> {
     const tarea = await this.taskRepository.findOne({ 
       where: { id_tarea, activa: true } 
@@ -163,7 +164,7 @@ private async obtenerEstudiantesDelCurso(idCurso: number): Promise<any[]> {
     return tarea;
   }
 
-  // ✅ Método para obtener tareas por docente (necesitarías una relación)
+  //  Método para obtener tareas por docente (necesitarías una relación)
   async obtenerTareasPorDocente(id_docente: number): Promise<Task[]> {
     // Esto asume que tienes una relación entre tareas y docente a través del curso
     return await this.taskRepository
@@ -192,9 +193,7 @@ async consultarTareas(filtros: { id_curso?: number; id_tarea?: number }) {
     query.andWhere('tarea.id_tarea = :id_tarea', { id_tarea: filtros.id_tarea });
   }
 
-  // ❌ REMOVER este filtro si quieres ver TODAS las tareas (incluyendo inactivas)
-  // query.andWhere('tarea.activa = :activa', { activa: true });
-
+  
   // Ordenar por fecha de publicación
   query.orderBy('tarea.fecha_publicacion', 'DESC');
 

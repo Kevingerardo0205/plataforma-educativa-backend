@@ -1,39 +1,55 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Notification } from './notification.entity';
+import { NotificationCreator } from './factory/notification.creator';
+import { CreateNotificationDTO } from './dto/create-notification.dto';
+
+
 
 @Injectable()
 export class NotificationsService {
 
   constructor(
     @InjectRepository(Notification)
-    private readonly notificationRepository: Repository<Notification>,
+    private readonly repo: Repository<Notification>,
+
+    @Inject('MANUAL_NOTIFICATION_CREATOR')
+    private readonly manualCreator: NotificationCreator,
+
+    @Inject('TASK_NOTIFICATION_CREATOR')
+    private readonly taskCreator: NotificationCreator,
   ) {}
 
-  async crearNotificacion(notificacionData: {
-    mensaje: string;
-    id_tarea: number;
-    id_estudiante: number;
-  }): Promise<Notification> {
-    const notificacion = this.notificationRepository.create({
-      ...notificacionData,
-      estado: 'Pendiente'
-    });
-    return await this.notificationRepository.save(notificacion);
+   async crearNotificacion(
+    data: CreateNotificationDTO,
+    tipo: 'MANUAL' | 'TASK'
+  ): Promise<Notification> {
+
+    const creator =
+      tipo === 'MANUAL'
+        ? this.manualCreator
+        : this.taskCreator;
+
+    return this.repo.save(creator.crear(data));
   }
 
-  async obtenerNotificacionesPorEstudiante(id_estudiante?: number): Promise<Notification[]> {
+  async obtenerNotificacionesPorEstudiante(
+    id_estudiante?: number
+  ): Promise<Notification[]> {
+
     const where: any = {};
     if (id_estudiante) {
       where.id_estudiante = id_estudiante;
     }
-    
-    return await this.notificationRepository.find({
+
+    return this.repo.find({
       where,
       order: { fecha_envio: 'DESC' },
     });
   }
+
 
   async obtenerNoLeidasPorEstudiante(id_estudiante?: number): Promise<Notification[]> {
     const where: any = { estado: 'Pendiente' };
@@ -41,50 +57,50 @@ export class NotificationsService {
       where.id_estudiante = id_estudiante;
     }
     
-    return await this.notificationRepository.find({
+    return await this.repo.find({
       where,
       order: { fecha_envio: 'DESC' },
     });
   }
 
-  async createFromRedis(data: {
-    mensaje: string;
-    id_tarea: number;
-    id_estudiante: number;
-    fecha_envio?: Date;
-    id_notificacion?: number;
-  }) {
-    const notificacion = this.notificationRepository.create({
-      mensaje: data.mensaje,
-      id_tarea: data.id_tarea,
-      id_estudiante: data.id_estudiante,
-      fecha_envio: data.fecha_envio ? new Date(data.fecha_envio) : new Date(),
-      estado: 'Pendiente'
+async createFromRedis(
+  data: CreateNotificationDTO
+): Promise<Notification> {
+    const notificacion = this.taskCreator.crear({
+      ...data,
+    
+     fecha_envio: data.fecha_envio
+        ? new Date(data.fecha_envio)
+        : new Date(),
     });
 
-    return await this.notificationRepository.save(notificacion);
-  }
+    return await this.repo.save(notificacion);  
+}
 
-  async marcarComoLeido(id_notificacion: number): Promise<Notification> {
-    await this.notificationRepository.update(id_notificacion, { 
-      estado: 'Leida' 
+async marcarComoLeido(id_notificacion: number): Promise<Notification> {
+    await this.repo.update(id_notificacion, { estado: 'Leida' });
+
+    const notificacion = await this.repo.findOne({
+      where: { id_notificacion },
     });
-    
-    const notificacion = await this.notificationRepository.findOne({ 
-      where: { id_notificacion } 
-    });
-    
+
     if (!notificacion) {
-      throw new NotFoundException(`Notificación con ID ${id_notificacion} no encontrada`);
+      throw new NotFoundException(
+        `Notificación con ID ${id_notificacion} no encontrada`,
+      );
     }
-    
+
     return notificacion;
   }
 
-  async findByStudentId(idEstudiante: number): Promise<Notification[]> {
-    return await this.notificationRepository.find({
+  async findByStudentId(
+    idEstudiante: number
+  ): Promise<Notification[]> {
+
+    return this.repo.find({
       where: { id_estudiante: idEstudiante },
       order: { fecha_envio: 'DESC' },
     });
   }
+
 }

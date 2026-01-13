@@ -3,18 +3,24 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
 import { Notification } from './notification.entity';
-import { NotificationsGateway } from './notifications.gateway'; // ✅ IMPORTA EL GATEWAY
+import { ManualNotificationCreator } from './factory/manual-notification.creator';
+import { TaskNotificationCreator } from './factory/task-notification.creator';
+
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Notification])   
-  ],
+  imports: [TypeOrmModule.forFeature([Notification])],
   providers: [
-    NotificationsService,NotificationsGateway ],
-  controllers: [NotificationsController],
-  exports: [
-    NotificationsGateway, // ✅ EXPORTA EL GATEWAY
-    NotificationsService
+    NotificationsService,
+
+    {
+      provide: 'MANUAL_NOTIFICATION_CREATOR',
+      useClass: ManualNotificationCreator,
+    },
+    {
+      provide: 'TASK_NOTIFICATION_CREATOR',
+      useClass: TaskNotificationCreator,
+    },
   ],
+  exports: [NotificationsService],
 })
 export class NotificationsModule {}
